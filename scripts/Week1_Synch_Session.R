@@ -72,6 +72,7 @@ dispersion_by_party <- df |>
     squared_diff = diff_from_mean^2
   ) |>
   summarize(
+    mean_dim1 = mean(nominate_dim1, na.rm = TRUE),
     sum_of_squared_diff = sum(squared_diff, na.rm = TRUE),
     variance = sum_of_squared_diff / n(),
     sd = sqrt(variance)
@@ -89,5 +90,24 @@ ggplot(dispersion_by_party) +
     x = "Congress",
     y = "Standard Deviation",
     color = "Party Code"
+  ) +
+  theme_minimal()
+
+# We might want to represent both the central tendency and dispersion of DW-NOMINATE scores in a single plot. Let's just focus on the Democratic party for now.
+# To do this, we can use a geom layer called geom_errorbar.
+dispersion_by_party |>
+  filter(party == "Democrat") |>
+  ggplot() +
+  geom_col(aes(x = factor(congress), y = mean_dim1), fill = "#002B47") +
+  geom_errorbar(
+    aes(x = factor(congress), ymin = mean_dim1 - sd, ymax = mean_dim1 + sd),
+    color = "gray50",
+    width = 0.2
+  ) +
+  scale_y_continuous(limits = c(-1, NA)) +
+  labs(
+    title = "Central Tendency and Dispersion of DW-NOMINATE Scores for Democrats Over Time",
+    x = "Congress",
+    y = "DW-NOMINATE Score"
   ) +
   theme_minimal()
