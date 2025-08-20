@@ -6,7 +6,38 @@
 # Load the tidyverse
 library(tidyverse)
 
-# Load the data
+# In the video lecture, we were told that the reason we square the differences between the values and the mean when calculating variance is to avoid negative values canceling out positive values.
+# There is actually a second reason: squaring the differences gives more weight to larger deviations from the mean, which is useful in many statistical contexts.
+# Let's illustrate this with a simple example. I am going to generate a sequence of values with the same mean but increasing absolute distance from the mean at the extremes.
+
+df <- data.frame()
+for (i in 1:20) {
+  # i is going to represent the magnitude of the deviation from the mean
+  vals <- c()
+  for (j in 1:100) {
+    # j is going to represent the length of the vector
+    start <- ifelse(length(vals) > 0, max(vals), 0) # Start at 0 for the first iteration, otherwise start at the max value of the previous iteration
+    vals <- c(vals, start + i, -(start + i))
+  }
+  df <- rbind(
+    df,
+    data.frame(n = i, variance = sum((vals - 0)^2) / length(vals))
+  )
+}
+
+# Now let's visualize the variance of these values as we increase the magnitude of the deviation from the mean.
+ggplot(df, aes(x = n, y = variance)) +
+  geom_line() +
+  labs(
+    title = "Variance of Values Over Iterations",
+    x = "Iteration Number (n)",
+    y = "Variance"
+  ) +
+  theme_minimal()
+
+# What do you notice? The variance increases *expontentially* as the magnitude of the deviation from the mean increases. This is because squaring the differences gives more weight to larger deviations.
+
+# Now let's talk about how we might use variance in a political science context.
 # For this session, we will be using voteview_house_ideology.csv, which contains DW-NOMINATE scores for members of the U.S. House of Representatives from the 102nd Congress (1991-1992) to the 118th Congress (2023-2024).
 df <- read_csv("data/voteview_house_ideology.csv")
 
