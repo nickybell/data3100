@@ -1,0 +1,159 @@
+---
+title: "Assignment 1"
+author: "Nicky Bell"
+output: 
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  include = FALSE
+)
+```
+
+For this assignment, we will explore data from G. Elliott Morris and Mark Rieke about candidates for the U.S. House of Representatives since 2000. They measure a candidate's "Wins Above Replacement" (WAR) and "Wins Above Replacement Probability" (WARP) to evaluate a candidate's quality relative to a generic alternative candidate. Before beginning this assignment, I recommend reading their [introduction to the data](https://www.gelliottmorris.com/p/and-the-most-skilled-us-house-representatives).
+
+### Assignment Instructions
+
+You must submit both a .Rmd file and knitted output in either HTML or PDF format. In addition, you **must** `echo` your code and hide any messages and warnings in your knitted output to assist the TAs in grading your work. Assignments missing either file, do not `echo` the code, or do not hide messages and warnings will receive a 2 point deduction.
+
+Where you are asked to interpret the results of our analysis, you must include a brief written response to receive full credit for the question.
+
+Please review the course policy on Generative AI tools in the [syllabus](https://canvas.upenn.edu/courses/1867281/assignments/syllabus).
+
+### Assignment Questions
+
+1. Load the data file "morris_war.csv" into R. Plot the distribution of "Wins Above Replacement" (WAR) using a histogram. Play around with the bin width and select the bin width that you think best reflects the distribution. What does the distribution look like? What does this tell you about the candidates in the dataset? 
+
+```{r}
+library(tidyverse)
+war_data <- read_csv("../data/morris_war.csv")
+ggplot(war_data, aes(x = WAR)) +
+  geom_histogram(binwidth = 0.005) +
+  labs(
+    title = "Distribution of Wins Above Replacement (WAR)",
+    x = "Wins Above Replacement (WAR)",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+2. As Morris and Rieke note, what we really care about is whether a candidate is more likely to win their race than a generic alternative. Show the distribution of "Wins Above Replacement Probability" (WARP) for winning candidates only (and excluding uncontested races). What does the distribution look like? What does this tell you about the importance of candidate quality in elections to the U.S. House of Representatives?
+
+```{r}
+war_data |>
+  filter(winner == TRUE & uncontested == 0) |>
+  ggplot(aes(x = WARP)) +
+  geom_histogram(binwidth = 0.05) +
+  labs(
+    title = "Distribution of Wins Above Replacement Probability (WARP)",
+    subtitle = "For Winning Candidates Only",
+    x = "Wins Above Replacement Probability (WARP)",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+3. As the American electorate has become more polarized by party, perhaps the importance of candidate quality has declined (since voters care more about the candidate's party than the candidate themselves). Show the mean WARP for winning candidates (excluding uncontested races) over time. What does this tell you about the importance of candidate quality in elections to the U.S. House of Representatives?
+
+```{r}
+war_data |>
+  filter(winner == TRUE & uncontested == 0) |>
+  group_by(cycle) |>
+  summarise(mean_warp = mean(WARP, na.rm = TRUE)) |>
+  ggplot(aes(x = cycle, y = mean_warp)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Mean Wins Above Replacement Probability (WARP) Over Time",
+    subtitle = "For Winning Candidates Only",
+    x = "Election Cycle",
+    y = "Mean WARP"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+4. Another way that we might think about the declining importance of candidate quality is that the dispersion of WARP has declined over time, since there are fewer incentives for candidates to stand out as exceptionally better than the generic alternative. Show the standard deviation of WARP over time for winning candidates (excluding uncontested races). What does this tell you about the importance of candidate quality in elections to the U.S. House of Representatives?
+
+```{r}
+war_data |>
+  filter(winner == TRUE & uncontested == 0) |>
+  group_by(cycle) |>
+  mutate(
+    mean_warp = mean(WARP, na.rm = TRUE),
+    diff_from_mean = WARP - mean_warp,
+    squared_diff = diff_from_mean^2
+  ) |>
+  summarize(
+    mean_warp = mean(WARP, na.rm = TRUE),
+    sum_of_squared_diff = sum(squared_diff, na.rm = TRUE),
+    variance = sum_of_squared_diff / n(),
+    sd = sqrt(variance)
+  ) |>
+  ggplot(aes(x = cycle, y = sd)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Standard Deviation of Wins Above Replacement Probability (WARP) Over Time",
+    subtitle = "For Winning Candidates Only",
+    x = "Election Cycle",
+    y = "Standard Deviation of WARP"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+5. BONUS QUESTION (1 point): Make the same graph, but this time, compare Democratic and Republican winners. What differences do you see between the parties? What is your hypothesis for why these differences exist?
+
+```{r}
+war_data |>
+  filter(winner == TRUE & uncontested == 0) |>
+  group_by(cycle, party) |>
+  mutate(
+    mean_warp = mean(WARP, na.rm = TRUE),
+    diff_from_mean = WARP - mean_warp,
+    squared_diff = diff_from_mean^2
+  ) |>
+  summarize(
+    mean_warp = mean(WARP, na.rm = TRUE),
+    sum_of_squared_diff = sum(squared_diff, na.rm = TRUE),
+    variance = sum_of_squared_diff / n(),
+    sd = sqrt(variance)
+  ) |>
+  ggplot(aes(x = cycle, y = sd, color = party)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(
+    values = c("DEM" = "#002B47", "REP" = "#E71F1F")
+  ) +
+  labs(
+    title = "Standard Deviation of Wins Above Replacement Probability (WARP) Over Time",
+    subtitle = "For Winning Candidates Only",
+    x = "Election Cycle",
+    y = "Standard Deviation of WARP"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```

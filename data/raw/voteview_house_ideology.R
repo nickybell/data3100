@@ -2,7 +2,7 @@ library(dplyr)
 library(readr)
 
 # Load the data
-df <- read_csv("data/raw/voteview_house_ideology.csv")
+df <- read_csv(here::here("data/raw/voteview_house_ideology.csv"))
 
 # Data wrangling
 df_last_mem <- df |>
@@ -49,4 +49,4 @@ df_last_mem |> # Where more than one member for a district remains in the datase
     nominate_dim1,
     nominate_dim2
   ) |>
-  write_csv("data/voteview_house_ideology.csv")
+  write_csv(here::here("data/voteview_house_ideology.csv"))
