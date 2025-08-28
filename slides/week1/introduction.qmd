@@ -1,0 +1,96 @@
+---
+title: "DATA 3100: Introduction to Statistical Methods"
+format:
+  revealjs:
+    embed-resources: true
+    css: styles.css
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+## Instructor
+
+::::: columns
+::: {.column width="40%"}
+![](Bell_Headshot_whitebg.jpg){.round-image}
+:::
+
+::: {.column width="60%"}
+### Dr. Nicky Bell
+
+-   **Email**: [belln\@sas.upenn.edu](mailto:belln@sas.upenn.edu)
+-   **Office Hours**: By appointment (via Zoom)
+-   I try to respond to emails by the end of the next business day (Mon. - Fri.)
+:::
+:::::
+
+## TAs
+
+:::::: columns
+::: {.column width="33%"}
+![Rose Hoffman](rh.jpg){.round-image}
+:::
+
+::: {.column width="33%"}
+![Leo Cassel-Siskind](lcs.png){.round-image}
+:::
+
+::: {.column width="33%"}
+![Matt Simkus](){.round-image}
+:::
+::::::
+
+### TA Office Hours
+
+```{r}
+tibble::tibble(
+  Day = c("Mondays", "Fridays", "Saturdays"),
+  Time = c("6:30 - 8:30 PM", "6:00 - 8:00 PM", "9:00 - 11:00 AM"),
+  TA = c("Rose", "Matt", "Leo")
+) |>
+  knitr::kable() |>
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+## Assessments
+
+```{r}
+tibble::tibble(
+  Assessment = c("Attendance", "Homework Assignments", "Final Exam"),
+  Weight = c("20%", "50%", "30%"),
+  Description = c(
+    "Weekly Zoom sessions (or recording + quiz)",
+    "7 assignments, best 6 count toward grade",
+    "Take-home exam"
+  ),
+  `Key Details` = c(
+    "Quiz option limited to 2 times per semester",
+    "Late assignments deducted 25% per 24-hour period",
+    "Distributed Oct 6, due Oct 20 11:59pm ET"
+  )
+) |>
+  knitr::kable() |>
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+## Generative AI Policy
+
+✅ **What is permissible:**
+
+-   Using GAI tools to answer questions, similar to using a search engine.
+-   Providing your R code as context and ask for assistance in resolving specific errors, as long as you do not allow the GAI tools (agents) to directly edit the code itself.
+-   Using GAI tools to generate code that is not specific to a data set.
+
+❌ **What is not permissible:**
+
+-   Generate code that is specific to a data set.
+-   Allowing agents to directly edit code that you have written.
+-   Using GAI tools to produce expository text (e.g., description, analysis, etc.)
+
+## Ed Discussion
+
+-   Please be sure to provide enough code that the TAs can reproduce your work, e.g.
+
+![](ed_discussion.png)

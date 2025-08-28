@@ -1,0 +1,31 @@
+.reveal .slide .columns {
+  display: flex;
+  align-items: center; /* This vertically aligns the two columns */
+  gap: 20px;
+}
+
+/*
+  Target the specific column containing the image (the first one)
+  and use flexbox to center its content horizontally.
+*/
+.reveal .slide .columns .column:first-child {
+  display: flex;
+  justify-content: center; /* This horizontally centers the image */
+}
+
+.round-image {
+  border-radius: 50%;      /* This is the key property to make it a circle */
+  width: 250px;            /* Set a fixed width */
+  height: 250px;           /* Set a fixed height */
+  object-fit: cover;       /* Prevents the image from being distorted */
+  border: 5px solid #557A95; /* Optional: Adds a visible frame */
+}
+
+figcaption {
+  text-align: center;
+  font-size: 0.8em; /* Optional: make caption text slightly smaller */
+}
+
+.reveal {
+  font-size: 32px !important;
+}

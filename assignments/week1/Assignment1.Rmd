@@ -31,7 +31,7 @@ Please review the course policy on Generative AI tools in the [syllabus](https:/
 
 ```{r}
 library(tidyverse)
-war_data <- read_csv("../data/morris_war.csv")
+war_data <- read_csv(here::here("data/week1/morris_war.csv"))
 ggplot(war_data, aes(x = WAR)) +
   geom_histogram(binwidth = 0.005) +
   labs(
