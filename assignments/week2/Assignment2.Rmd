@@ -1,0 +1,111 @@
+---
+title: "Assignment 2"
+author: "Nicky Bell"
+output: 
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  include = FALSE
+)
+```
+
+For this homework assignment, we will be working with data on Billboard Hot 100 \#1 hits from 1958 to 2025 compiled by Chris Dalla Riva for his forthcoming book, [*Uncharted Territory: What Numbers Tell Us about the Biggest Hit Songs and Ourselves*](https://www.chrisdallariva.com/uncharted). For each song, Della Riva has collected data on the people involved in producing the song, the instruments and styles used in the song, and various attributes of the song (e.g., loudness, tempo, and danceability). It's a fun dataset to play around with, and we will be using it to explore the normal distribution.
+
+The best way to obtain this data is to download it directly from the public Google Sheets file. For this, you will need the `googlesheets4` package. If you haven't already installed it, you can do so by running `install.packages("googlesheets4")`. Once you have the package installed, you can load the data into R with the following code:
+
+`read_sheet("https://docs.google.com/spreadsheets/d/1j1AUgtMnjpFTz54UdXgCKZ1i4bNxFjf01ImJ-BqBEt0/", sheet = "Data", .name_repair = "universal_quiet")`
+
+and follow the on-screen instructions to authenticate your Google account. You should only need to do this once.
+
+You can also follow the link in your web browser to view the Data Dictionary, which describes each variable in the dataset.
+
+### Assignment Instructions
+
+You must submit both a .Rmd file and knitted output in either HTML or PDF format. In addition, you **must** `echo` your code and hide any messages and warnings in your knitted output to assist the TAs in grading your work. Assignments missing either file, do not `echo` the code, or do not hide messages and warnings will receive a 2 point deduction.
+
+Where you are asked to interpret the results of our analysis, you must include a brief written response to receive full credit for the question.
+
+Please review the course policy on Generative AI tools in the [syllabus](https://canvas.upenn.edu/courses/1867281/assignments/syllabus).
+
+### Assignment Questions
+
+1. Let's start by exploring the distribution of the `BPM` variable (BPM = beats per minute, the speed of the song). Create a histogram of the `BPM` variable. Do you think the distribution of `BPM` is approximately normal? Why or why not?
+
+```{r}
+library(tidyverse)
+library(googlesheets4)
+
+billboard <- read_sheet(
+  "https://docs.google.com/spreadsheets/d/1j1AUgtMnjpFTz54UdXgCKZ1i4bNxFjf01ImJ-BqBEt0/",
+  sheet = "Data",
+  .name_repair = "universal_quiet"
+)
+
+ggplot(billboard, aes(x = BPM)) +
+  geom_histogram() +
+  labs(title = "Histogram of BPM", x = "BPM", y = "Frequency") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+2. In the video lectures, you were introduced to the **empirical rule**, which states that for a normal distribution, approximately 68% of the data falls within one standard deviation of the mean, approximately 95% falls within two standard deviations, and approximately 99.7% falls within three standard deviations. Can you use the `pnorm()` function to validate the empirical rule for the `BPM` variable?
+
+    *Hint: Set `lower.tail = FALSE` to calculate the proportion of the distribution that is **above** the value, and take advantage of the fact that the normal distribution is symmetrical to calculate the proportion that is above or below (outside) of the value. What is the area of the curve that is inside of the value?*
+
+```{r}
+mean_bpm <- mean(billboard$BPM, na.rm = TRUE)
+sd_bpm <- sd(billboard$BPM, na.rm = TRUE)
+1 - (pnorm(mean_bpm + sd_bpm, mean_bpm, sd_bpm, lower.tail = F) * 2)
+1 - (pnorm(mean_bpm + 2 * sd_bpm, mean_bpm, sd_bpm, lower.tail = F) * 2)
+1 - (pnorm(mean_bpm + 3 * sd_bpm, mean_bpm, sd_bpm, lower.tail = F) * 2)
+```
+
+3. You can also use the `qnorm()` function to find the value of a normally-distributed variable at a given percentile. What is the value of `Danceability` at the 90th percentile?
+
+```{r}
+mean_dance <- mean(billboard$Danceability, na.rm = TRUE)
+sd_dance <- sd(billboard$Danceability, na.rm = TRUE)
+qnorm(0.9, mean_dance, sd_dance)
+```
+
+4. We might expect the `Acousticness` of songs to decline over time as electric instruments and computer prouduction have become more widely available. Calculate the `Acousticness` value at the 75th percentile of \#1 songs in each decade of the dataset and generate a graph showing how this value has changed over time.
+
+    *Hint: You can use the `qnorm()` function within a `summarize()` function to calculate the value at a given percentile.*
+
+```{r}
+library(lubridate)
+billboard |>
+  mutate(
+    decade = case_when(
+      year(Date) >= 2020 ~ "2020s",
+      year(Date) >= 2010 ~ "2010s",
+      year(Date) >= 2000 ~ "2000s",
+      year(Date) >= 1990 ~ "1990s",
+      year(Date) >= 1980 ~ "1980s",
+      year(Date) >= 1970 ~ "1970s",
+      year(Date) >= 1960 ~ "1960s",
+      year(Date) >= 1950 ~ "1950s"
+    )
+  ) |>
+  group_by(decade) |>
+  summarize(
+    acousticness_mean = mean(Acousticness, na.rm = TRUE),
+    acousticness_sd = sd(Acousticness, na.rm = TRUE),
+    acousticness_75th = qnorm(0.75, acousticness_mean, acousticness_sd)
+  ) |>
+  ggplot(aes(x = decade, y = acousticness_75th)) +
+  geom_col() +
+  labs(
+    title = "75th Percentile of Acousticness by Decade",
+    x = "Decade",
+    y = "Acousticness at 75th Percentile"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
