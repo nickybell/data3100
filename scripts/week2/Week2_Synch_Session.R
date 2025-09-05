@@ -64,7 +64,7 @@ extremes <- df |>
   group_by(congress, party) |>
   summarize(
     mean_dim1 = mean(nominate_dim1, na.rm = TRUE),
-    sd_dim1 = sd(nominate_dim1, na.rm = TRUE)
+    sd_dim1 = sd(nominate_dim1, na.rm = TRUE) # This is the sample standard deviation, but close enough for our purposes here
   ) |>
   mutate(
     p90 = case_when(
@@ -94,7 +94,7 @@ extremes |>
 extremes <- extremes |>
   mutate(
     p05 = case_when(
-      party == "Republican" ~ qnorm(0.05, mean_dim1, sd_dim1),
+      party == "Republican" ~ qnorm(.05, mean_dim1, sd_dim1),
       party == "Democrat" ~ qnorm(.95, mean_dim1, sd_dim1)
     )
   )
@@ -112,12 +112,21 @@ bipartisanship <- extremes |>
           lower.tail = FALSE
         ),
       party == "Republican" ~
-        1 -
-          pnorm(
-            p05[party == "Democrat"],
-            mean_dim1,
-            sd_dim1,
-            lower.tail = FALSE
-          )
+        pnorm(
+          p05[party == "Democrat"],
+          mean_dim1,
+          sd_dim1,
+          lower.tail = TRUE
+        )
     )
   )
+
+# Let's visualize the percentage of each party's distribution that falls beyond the 95th percentile of the opposite party's distribution over time.
+
+bipartisanship |>
+  ggplot() +
+  geom_line(aes(x = congress, y = prop_bipartisan, color = party)) +
+  scale_color_manual(
+    values = c("Democrat" = "#002B47", "Republican" = "#E71F1F")
+  ) +
+  theme_minimal()
