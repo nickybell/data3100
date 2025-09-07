@@ -41,4 +41,53 @@ ggplot(sample_size_df, aes(x = sample_means)) +
     plot.title = element_text(hjust = 0.5)
   )
 
-# Now let's work with some real data, specifically from NOAA's National Bouy Data Center (https://www.ndbc.noaa.gov/). The data contains hourly measurements of wind speed, wind direction, air temperature, and water temperature from over a thousand buoys around the world.
+# Now let's work with some real data, specifically from NOAA's National Buoy Data Center (https://www.ndbc.noaa.gov/). The data contains hourly measurements of wind speed, wind direction, air temperature, and water temperature from over a thousand buoys around the world. I've already downloaded the data for you and generated the mean water surface temperature for each buoy for each month.
+buoy <- read_csv("data/week3/buoydata.csv")
+
+# Given this data, how certain can we be that global temperatures have been rising since 1990? It depends on the sampling distribution! When the sampling distribution is tight, we can be more certain that the observed trend is real. When the sampling distribution is wide, we can't be as certain.
+
+# For each year since 1990, I am going to sample 30 buoys (with replacement) and calculate the mean water temperature. I will repeat this process 100 times for each year.
+set.seed(20912)
+sampling_dist <- tibble()
+for (year in 1990:2023) {
+  cat("Processing year:", year, "\n")
+  for (i in 1:100) {
+    sampled_buoys <- buoy |>
+      filter(YEAR == year) |>
+      sample_n(30, replace = TRUE)
+    mean_temp <- mean(sampled_buoys$WTMP, na.rm = TRUE)
+    sampling_dist <- bind_rows(
+      sampling_dist,
+      tibble(
+        YEAR = year,
+        sample_mean = mean_temp,
+        iteration = i
+      )
+    )
+  }
+}
+
+# We can also calculate our estimate of the mean from our samples.
+estimate_means <- sampling_dist |>
+  group_by(date = make_datetime(YEAR)) |>
+  summarize(estimate_mean = mean(sample_mean, na.rm = TRUE))
+
+# Now, I'm going to plot the timeseries of sampled ocean surface temperatures, along with the mean.
+
+sampling_dist |>
+  mutate(date = make_datetime(YEAR)) |>
+  ggplot() +
+  geom_line(aes(x = date, y = sample_mean, group = iteration), alpha = 0.1) +
+  geom_line(
+    data = estimate_means,
+    aes(x = date, y = estimate_mean),
+    color = "red",
+    size = 1
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Sampling Distribution of Ocean Surface Temperatures",
+    x = "Year",
+    y = "Mean Water Temperature (°C)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
