@@ -54,7 +54,7 @@ for (year in 1990:2023) {
   for (i in 1:100) {
     sampled_buoys <- buoy |>
       filter(YEAR == year) |>
-      sample_n(30, replace = TRUE)
+      sample_frac(.1, replace = TRUE)
     mean_temp <- mean(sampled_buoys$WTMP, na.rm = TRUE)
     sampling_dist <- bind_rows(
       sampling_dist,
