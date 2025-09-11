@@ -8,7 +8,7 @@ library(tidyverse)
 
 # In the video lectures, we learned that we can decrease the dispersion (increase the precision) of our sample means by increasing our sample size. Yet, pollsters often use small sample sizes of around 1,000 respondents. Why don't pollsters use larger sample sizes to increase the precision of their estimates?
 
-# Let's say we are measuring a variable with a mean of 50 and a standard deviation of 10. (This meanas that How much does the standard deviation of our sample means decrease as we increase our sample size?
+# Let's say we are measuring a variable with a mean of 50 and a standard deviation of 10. How much does the standard deviation of our sample means decrease as we increase our sample size?
 
 population <- rnorm(100000, mean = 50, sd = 10)
 
@@ -46,7 +46,7 @@ buoy <- read_csv("data/week3/buoydata.csv")
 
 # Given this data, how certain can we be that global temperatures have been rising since 1990? It depends on the sampling distribution! When the sampling distribution is tight, we can be more certain that the observed trend is real. When the sampling distribution is wide, we can't be as certain.
 
-# For each year since 1990, I am going to sample 30 buoys (with replacement) and calculate the mean water temperature. I will repeat this process 100 times for each year.
+# For each year since 1990, I am going to sample 5% of the buoys (with replacement) and calculate the mean water temperature. I will repeat this process 100 times for each year.
 set.seed(20912)
 sampling_dist <- tibble()
 for (year in 1990:2023) {
@@ -54,7 +54,7 @@ for (year in 1990:2023) {
   for (i in 1:100) {
     sampled_buoys <- buoy |>
       filter(YEAR == year) |>
-      sample_frac(.1, replace = TRUE)
+      slice_sample(prop = .05, replace = TRUE)
     mean_temp <- mean(sampled_buoys$WTMP, na.rm = TRUE)
     sampling_dist <- bind_rows(
       sampling_dist,
@@ -84,6 +84,7 @@ sampling_dist |>
     color = "red",
     size = 1
   ) +
+  scale_y_continuous(limits = c(14, 25)) +
   theme_minimal() +
   labs(
     title = "Sampling Distribution of Ocean Surface Temperatures",
