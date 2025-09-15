@@ -41,7 +41,7 @@ ggplot(sample_size_df, aes(x = sample_means)) +
     plot.title = element_text(hjust = 0.5)
   )
 
-# Now let's work with some real data, specifically from NOAA's National Buoy Data Center (https://www.ndbc.noaa.gov/). The data contains hourly measurements of wind speed, wind direction, air temperature, and water temperature from over a thousand buoys around the world. I've already downloaded the data for you and generated the mean water surface temperature for each buoy for each month.
+# Now let's work with some real data, specifically from NOAA's National Buoy Data Center (https://www.ndbc.noaa.gov/). The data contains hourly measurements of wind speed, wind direction, air temperature, and water temperature from over a thousand buoys around the world. I've already downloaded the data for you and generated the mean water surface temperature for each buoy for each year.
 buoy <- read_csv("data/week3/buoydata.csv")
 
 # Given this data, how certain can we be that global temperatures have been rising since 1990? It depends on the sampling distribution! When the sampling distribution is tight, we can be more certain that the observed trend is real. When the sampling distribution is wide, we can't be as certain.
@@ -54,7 +54,7 @@ for (year in 1990:2023) {
   for (i in 1:100) {
     sampled_buoys <- buoy |>
       filter(YEAR == year) |>
-      slice_sample(prop = .05, replace = TRUE)
+      slice_sample(prop = .25, replace = TRUE)
     mean_temp <- mean(sampled_buoys$WTMP, na.rm = TRUE)
     sampling_dist <- bind_rows(
       sampling_dist,

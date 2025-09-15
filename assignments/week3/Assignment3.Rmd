@@ -29,7 +29,7 @@ Please review the course policy on Generative AI tools in the [syllabus](https:/
 
 ### Assignment Questions
 
-1. Imagine that the Department of Parks & Recreation wants to know whether it can replace the tree census with a tree sample to save time and money. The Department is willing to sample up to 10% of the city's trees, but wants to sample only enough trees that they can be confident in the estimate. Use sampling distributions, determine at what proportion of trees does the sampling distribution of the mean yield a sufficiently "tight" distribution around the true mean.
+1. Imagine that the Department of Parks & Recreation wants to know whether it can replace the tree census with a tree sample to save time and money. The Department is willing to sample up to 10% of the city's trees, but wants to sample only enough trees that they can be confident in the estimates. Using sampling distributions, determine at what proportion of trees the sampling distribution of the mean tree diameter at breast height (`tree_dbh`) yields a sufficiently "tight" distribution around the true mean.
 
     *Hint: This is a big dataset, so you may use as few as 100 iterations to generate the sampling distribution.*
 
