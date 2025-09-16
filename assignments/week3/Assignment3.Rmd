@@ -1,0 +1,126 @@
+---
+title: "Assignment 3"
+author: "Nicky Bell"
+output: 
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  include = FALSE
+)
+```
+
+The New York City Department of Parks & Recreation is currently undergoing its [decennial tree census](https://www.nycgovparks.org/reg/trees-count). With the help of volunteers, the Department aims to record the location, size, species, and condition of all park trees in New York City. For street trees, the census will use devices mounted on cars to create digital scans of trees that can be analyzed later.
+
+In this assignment, we will analyze the tree census data from the 2015 census to understand the value and limitations of sampling trees instead of conducting a full census.
+
+### Assignment Instructions
+
+You must submit both a .Rmd file and knitted output in either HTML or PDF format. In addition, you **must** `echo` your code and hide any messages and warnings in your knitted output to assist the TAs in grading your work. Assignments missing either file, do not `echo` the code, or do not hide messages and warnings will receive a 2 point deduction.
+
+Where you are asked to interpret the results of our analysis, you must include a brief written response to receive full credit for the question.
+
+Please review the course policy on Generative AI tools in the [syllabus](https://canvas.upenn.edu/courses/1867281/assignments/syllabus).
+
+### Assignment Questions
+
+1. Imagine that the Department of Parks & Recreation wants to know whether it can replace the tree census with a tree sample to save time and money. The Department is willing to sample up to 10% of the city's trees, but wants to sample only enough trees that they can be confident in the estimates. Using sampling distributions, determine at what proportion of trees the sampling distribution of the mean tree diameter at breast height (`tree_dbh`) yields a sufficiently "tight" distribution around the true mean.
+
+    *Hint: This is a big dataset, so you may use as few as 100 iterations to generate the sampling distribution.*
+
+```{r}
+library(tidyverse)
+trees <- read_csv(here::here("data/week3/new_york_tree_census_2015.csv"))
+set.seed(20912)
+sampling_dist <- tibble()
+for (p in seq(.01, .1, .01)) {
+  for (i in seq_len(100)) {
+    sampling_dist <- bind_rows(
+      sampling_dist,
+      trees |>
+        sample_frac(p) |>
+        summarize(mean_diam = mean(tree_dbh, na.rm = TRUE)) |>
+        mutate(iter = i, sample_prop = p)
+    )
+  }
+}
+
+ggplot(sampling_dist, aes(x = mean_diam)) +
+  geom_histogram() +
+  facet_wrap(~sample_prop, nrow = 2) +
+  labs(
+    title = "Sampling Distribution of Mean Tree Diameter",
+    x = "Mean Tree Diameter (inches)",
+    y = "Frequency"
+  )
+```
+
+2. Imagine that the Department takes your recommendation from question 1 and samples the appropriate proportion of trees. The Department wants to know how accurate the estimate of the mean tree diameter is likely to be. Use the functions we know for evaluating the standard distribution to estimate the 95% confidence interval of the mean tree diameter (the values at the 2.5th and 97.5th percentiles of the sampling distribution).
+
+```{r}
+sampling_dist.04 <- sampling_dist |>
+  filter(sample_prop == .04)
+mean_sampling_dist.04 <- mean(sampling_dist.04$mean_diam)
+sd_sampling_dist.04 <- sd(sampling_dist.04$mean_diam)
+ci_lower <- qnorm(0.025, mean = mean_sampling_dist.04, sd = sd_sampling_dist.04)
+ci_upper <- qnorm(0.975, mean = mean_sampling_dist.04, sd = sd_sampling_dist.04)
+print(paste(
+  "95% Confidence Interval: [",
+  round(ci_lower, 2),
+  ", ",
+  round(ci_upper, 2),
+  "]",
+  sep = ""
+))
+```
+
+3. The Department must also decide whether to hire professional arborists or use volunteers to conduct the census. The Department is concerned that volunteers may not be as accurate as professionals in measuring tree diameters. Based on your recommended sample size from question 1, compare the sampling distributions of the mean tree diameter for professionals and volunteers. Are the distributions similar enough that volunteers could be used in place of professionals?
+
+    *Hint: This question is not about the estimate of the mean, but rather the dispersion of the sampling distribution.*
+
+```{r}
+sample_size <- nrow(trees) * .04
+professionals <- tibble()
+for (i in seq_len(100)) {
+  professionals <- bind_rows(
+    professionals,
+    trees |>
+      filter(user_type != "Volunteer") |>
+      sample_n(sample_size) |>
+      summarize(mean_diam = mean(tree_dbh, na.rm = TRUE)) |>
+      mutate(type = "Professional", iter = i)
+  )
+}
+
+volunteers <- tibble()
+for (i in seq_len(100)) {
+  volunteers <- bind_rows(
+    volunteers,
+    trees |>
+      filter(user_type == "Volunteer") |>
+      sample_n(sample_size) |>
+      summarize(mean_diam = mean(tree_dbh, na.rm = TRUE)) |>
+      mutate(type = "Volunteer", iter = i)
+  )
+}
+
+bind_rows(
+  professionals,
+  volunteers
+) |>
+  ggplot(aes(x = mean_diam, fill = type)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 20) +
+  labs(
+    title = "Sampling Distribution of Mean Tree Diameter by User Type",
+    x = "Mean Tree Diameter (inches)",
+    y = "Frequency",
+    fill = "User Type"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))
+```
