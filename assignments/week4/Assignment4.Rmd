@@ -76,7 +76,7 @@ For this section, you will need to install and load the `{survey}` and `{srvyr}`
 
     Finally, create a [survey design object](https://tidy-survey-r.github.io/tidy-survey-book/c04-getting-started.html#setup-des-obj) from your modified data frame using the code below:
 
-```{r, echo = TRUE, eval = FALSE}
+```{r, echo = TRUE, eval = FALSE, include = TRUE}
 ces_design <- as_survey_design(ces_mod, weights = commonweight)
 ```
 
@@ -106,7 +106,7 @@ ces_design <- as_survey_design(ces_mod, weights = commonweight)
 
     *Hint: Look at the formula in the `svyttest()` function below. We are comparing the mean of `harris - .5` to `0`; given this, think carefully about how you should interpret positive and negative means that are estimated by the weighted t-test function.*
 
-```{r, echo = TRUE, eval = FALSE}
+```{r, echo = TRUE, eval = FALSE, include = TRUE}
 svyttest(harris - .5 ~ 0, design = ces_design, na.rm = TRUE)
 ```
 
@@ -121,7 +121,7 @@ for (i in c(4, 13, 26, 32, 37, 42, 55)) {
   )
   state_summary <- tibble(
     state = i,
-    mean_harris = t_test_result$estimate,
+    mean_harris = t_test_result$estimate + 0.5,
     p_value = t_test_result$p.value
   )
   harris_results <- bind_rows(harris_results, state_summary)
