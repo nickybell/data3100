@@ -85,7 +85,7 @@ library(survey)
 library(srvyr)
 ces <- read_csv(here::here("data/week4/ces24.csv"))
 ces_mod <- ces |>
-  filter(CC24_363 %in% c(2, 3, 4, 5)) |>
+  filter(CC24_363 %in% 1:4) |>
   mutate(
     harris = case_when(CC24_364a == 1 ~ 1, CC24_364b == 1 ~ 1, TRUE ~ 0)
   )
