@@ -53,7 +53,17 @@ hurdat3 <- anti_join(
   hurdat2,
   count(hurdat2, date) |> filter(n > 1),
   by = join_by(date)
-)
+) |>
+  mutate(
+    category = case_when(
+      max_wind_knots >= 137 ~ "5",
+      max_wind_knots >= 113 ~ "4",
+      max_wind_knots >= 96 ~ "3",
+      max_wind_knots >= 83 ~ "2",
+      max_wind_knots >= 64 ~ "1",
+      TRUE ~ "TS" # Tropical Storm (below hurricane strength)
+    )
+  )
 
 # Load the NY Fed's cost of natural disasters data
 nyf <- read_fst(here::here(
@@ -63,12 +73,15 @@ nyf <- read_fst(here::here(
 nyf2 <- nyf |>
   filter(weight_type == "Equal" & event_type == "Hurricane") |>
   summarize(
-    total_property_damage = sum(damages_property_adj, na.rm = TRUE),
+    total_property_damage_millions = sum(
+      damages_property_adj / 1000000,
+      na.rm = TRUE
+    ),
     total_injuries = sum(injuries_direct, na.rm = T),
     total_fatalities = sum(fatalities_direct, na.rm = T),
     .by = c(episode_id, begin_date)
   ) |>
-  arrange(begin_date, desc(total_property_damage)) |>
+  arrange(begin_date, desc(total_property_damage_millions)) |>
   distinct(begin_date, .keep_all = TRUE)
 
 # If we're lucky, we can join these two datasets by date and it will be a one-to-one match.
@@ -78,6 +91,6 @@ df <- inner_join(
   by = c("date" = "begin_date"),
   relationship = "one-to-one"
 ) |>
-  filter(total_property_damage > 0) # remove incorrect data
+  filter(total_property_damage_millions > 0) # remove incorrect data
 
 write_csv(df, here::here("data/week6/hurricane_landfalls.csv"))
