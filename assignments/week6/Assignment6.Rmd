@@ -1,0 +1,172 @@
+---
+title: "Assignment 6"
+author: "Nicky Bell"
+output: 
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  include = FALSE
+)
+```
+
+### Assignment Instructions
+
+You must submit both a .Rmd file and knitted output in either HTML or PDF format. In addition, you **must** `echo` your code and hide any messages and warnings in your knitted output to assist the TAs in grading your work. Assignments missing either file, do not `echo` the code, or do not hide messages and warnings will receive a 2 point deduction.
+
+Where you are asked to interpret the results of our analysis, you must include a brief written response to receive full credit for the question.
+
+Please review the course policy on Generative AI tools in the [syllabus](https://canvas.upenn.edu/courses/1867281/assignments/syllabus).
+
+## Part I
+
+Let's return to DeSante's (2013) experiment exploring how "deservingness" affects the allocation of social benefits from the week 4 homework.^[DeSante, Christopher. 2013. "Working Twice as Hard to Get Half as Far: Race, Work Ethic, and America's Deserving Poor." *American Journal of Political Science*, 57: 342-356. https://doi.org/10.1111/ajps.12006.] Let's see why regression is a more appropriate tool for analyzing this data than t-tests.
+
+```{r}
+library(tidyverse)
+library(infer)
+library(knitr)
+library(stargazer)
+library(gssr)
+desante <- read_csv(here::here("assignments/week5/desante2013_modified.csv"))
+```
+
+1. Conduct two t-tests comparing the effect of race and the effect of work ethic on allocation.
+```{r}
+desante |>
+  t_test(allocation ~ race, order = c("white", "black")) |>
+  kable()
+
+desante |>
+  t_test(allocation ~ work_ethic, order = c("poor", "excellent")) |>
+  kable()
+```
+
+2. Now, conduct a regression of `allocation` on `race` and `work_ethic`. Use the `{stargazer}` package to produce a nicely formatted table of your regression results.
+
+```{r}
+reg1 <- lm(allocation ~ race + work_ethic, data = desante)
+```
+
+```{r results = "asis"}
+stargazer(
+  reg1,
+  type = "html",
+  title = "Regression of Allocation on Race and Work Ethic",
+  dep.var.labels = "Allocation",
+  covariate.labels = c("Race: Black", "Work Ethic: Low"),
+  keep.stat = c("n", "adj.rsq")
+)
+```
+
+3. Compare the results of your regression to the results of your t-tests. Are they the same or different? Use an LLM (like Gemini or Claude) to help you understand why the results are the same or different. Provide a brief written interpretation of your findings.
+
+```{r, results = "asis", echo = FALSE}
+cat(
+  "The difference in means between white and black recipients in the t-test is estimated to be about $27, while the regression coefficient for race is about $58. This suggests that the effect of race on allocation is confounded by work ethic. In other words, some of the correlation between race and allocation is actually due to differences in work ethic. By including work ethic in the regression, we can isolate the effect of race on allocation."
+)
+```
+
+## Part II
+
+In this part of the assignment, we will work with the GSS data from our Week 3 and Week 4 synchronous sessions. You will need the `{gssr}` and `{gssrdoc}` package to complete this part of the assignment.
+
+4. Question `trppl` asks respondents about their trust in other people, ranging from 0 ("You can't be too careful") to 10 ("Most people can be trusted"). For the 2024 GSS survey, regress `trppl` on `age` (in years), `educ` (in years of education), `sex`, `partyid`, and `income16`. Use the `{stargazer}` package to produce a nicely formatted table of your regression results.
+
+   You must recode `partyid` to be either Democrat (including "Strong Democrat", "Not Strong Democrat", and "Independent, Near Democrat") or Republican (including "Independent, Near Republican", "Not Strong Republican", and "Strong Republican"). You should exclude respondents who identify as "Other party" or "No preference".
+
+   You may treat `educ` and `income16` as continuous variables, even though technically they are categorical.
+```{r}
+data(gss_all)
+gss_2024 <- gss_all |>
+  filter(year == 2024) |>
+  mutate(
+    pid = case_when(
+      partyid %in% c(0, 1, 2) ~ "Democrat",
+      partyid %in% c(4, 5, 6) ~ "Republican",
+      TRUE ~ NA
+    )
+  )
+reg2 <- lm(trppl ~ age + educ + sex + pid + income16, data = gss_2024)
+```
+
+```{r results = "asis"}
+stargazer(
+  reg2,
+  type = "html",
+  title = "Regression of Trust in People (2024 GSS)",
+  dep.var.labels = "Trust in People (0-10)",
+  covariate.labels = c(
+    "Age",
+    "Education",
+    "Sex: Female",
+    "Party ID: Republican",
+    "Income"
+  ),
+  keep.stat = c("n", "adj.rsq")
+)
+```
+
+5. Interpret the results of your regression. Which variables are statistically significant at the 0.05 level? How do you interpret the coefficients of these variables?
+
+```{r, results = "asis", echo = FALSE}
+cat(
+  "Age is statistically significant at the 0.05 level, with a coefficient of 0.017. This indicates that for each additional year of age, trust in people increases by 0.017 points on the 0-10 scale, holding all other variables constant. The coefficient on education is also statistically significant at the 0.05 level, with a coefficient of 0.123. This indicates that for each additional year of education, trust in people increases by 0.127 points on the 0-10 scale, holding all other variables constant. Finally, the coefficient on income is statistically significant at the 0.05 level, with a coefficient of 0.068. This indicates that for each additional unit increase in income (as measured by the income16 variable), trust in people increases by 0.068 points on the 0-10 scale, holding all other variables constant."
+)
+```
+
+6. The question `spkrac` asks whether a person who believes that Blacks are genetically inferior should be allowed to make a speech in your community. Generate a linear probability model for the 2024 survey on `spkrac` using the same independent variables as in \#4 above.  Use the `{stargazer}` package to produce a nicely formatted table of your regression results.
+
+```{r}
+gss_2024 <- gss_2024 |>
+  mutate(
+    spkrac = case_when(
+      spkrac == 2 ~ 0,
+      TRUE ~ spkrac
+    )
+  )
+reg3 <- lm(spkrac ~ age + educ + sex + pid + income16, data = gss_2024)
+```
+
+```{r results = "asis"}
+stargazer(
+  reg3,
+  type = "html",
+  title = "Regression of Permit Racist Speaker (2024 GSS)",
+  covariate.labels = c(
+    "Age",
+    "Education",
+    "Sex: Female",
+    "Party ID: Republican",
+    "Income"
+  ),
+  keep.stat = c("n", "adj.rsq")
+)
+```
+
+7. Interpret the results of your regression. Which variables are statistically significant at the 0.05 level? How do you interpret the coefficients of these variables?
+
+```{r, results = "asis", echo = FALSE}
+cat(
+  "See answer to #5 as an example of how to interpret regression results."
+)
+```
+
+8. *BONUS: Pick any set of values for the independent variables. Describe this person and provide their predicted probability of supporting this person being allowed to give a speech in their community.*
+
+```{r}
+out <- predict(
+  reg3,
+  data.frame(age = 35, educ = 20, sex = 1, pid = "Democrat", income16 = 26)
+)
+tibble(
+  Description = "35 year old female Democrat with 8 yrs.+ college and an income greater than $170k.",
+  `Predicted Probability of Support` = out
+) |>
+  knitr::kable()
+```
