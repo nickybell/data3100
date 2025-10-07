@@ -39,11 +39,11 @@ desante <- read_csv(here::here("assignments/week5/desante2013_modified.csv"))
 1. Conduct two t-tests comparing the effect of race and the effect of work ethic on allocation.
 ```{r}
 desante |>
-  t_test(allocation ~ race) |>
+  t_test(allocation ~ race, order = c("white", "black")) |>
   kable()
 
 desante |>
-  t_test(allocation ~ work_ethic) |>
+  t_test(allocation ~ work_ethic, order = c("poor", "excellent")) |>
   kable()
 ```
 
@@ -65,6 +65,12 @@ stargazer(
 ```
 
 3. Compare the results of your regression to the results of your t-tests. Are they the same or different? Use an LLM (like Gemini or Claude) to help you understand why the results are the same or different. Provide a brief written interpretation of your findings.
+
+```{r, results = "asis", echo = FALSE}
+cat(
+  "The difference in means between white and black recipients in the t-test is estimated to be about $27, while the regression coefficient for race is about $58. This suggests that the effect of race on allocation is confounded by work ethic. In other words, some of the correlation between race and allocation is actually due to differences in work ethic. By including work ethic in the regression, we can isolate the effect of race on allocation."
+)
+```
 
 ## Part II
 
@@ -94,6 +100,7 @@ stargazer(
   reg2,
   type = "html",
   title = "Regression of Trust in People (2024 GSS)",
+  dep.var.labels = "Trust in People (0-10)",
   covariate.labels = c(
     "Age",
     "Education",
@@ -106,6 +113,12 @@ stargazer(
 ```
 
 5. Interpret the results of your regression. Which variables are statistically significant at the 0.05 level? How do you interpret the coefficients of these variables?
+
+```{r, results = "asis", echo = FALSE}
+cat(
+  "Age is statistically significant at the 0.05 level, with a coefficient of 0.017. This indicates that for each additional year of age, trust in people increases by 0.017 points on the 0-10 scale, holding all other variables constant. The coefficient on education is also statistically significant at the 0.05 level, with a coefficient of 0.123. This indicates that for each additional year of education, trust in people increases by 0.127 points on the 0-10 scale, holding all other variables constant. Finally, the coefficient on income is statistically significant at the 0.05 level, with a coefficient of 0.068. This indicates that for each additional unit increase in income (as measured by the income16 variable), trust in people increases by 0.068 points on the 0-10 scale, holding all other variables constant."
+)
+```
 
 6. The question `spkrac` asks whether a person who believes that Blacks are genetically inferior should be allowed to make a speech in your community. Generate a linear probability model for the 2024 survey on `spkrac` using the same independent variables as in \#4 above.  Use the `{stargazer}` package to produce a nicely formatted table of your regression results.
 
@@ -138,11 +151,22 @@ stargazer(
 
 7. Interpret the results of your regression. Which variables are statistically significant at the 0.05 level? How do you interpret the coefficients of these variables?
 
+```{r, results = "asis", echo = FALSE}
+cat(
+  "See answer to #5 as an example of how to interpret regression results."
+)
+```
+
 8. *BONUS: Pick any set of values for the independent variables. Describe this person and provide their predicted probability of supporting this person being allowed to give a speech in their community.*
 
 ```{r}
-predict(
+out <- predict(
   reg3,
   data.frame(age = 35, educ = 20, sex = 1, pid = "Democrat", income16 = 26)
 )
+tibble(
+  Description = "35 year old female Democrat with 8 yrs.+ college and an income greater than $170k.",
+  `Predicted Probability of Support` = out
+) |>
+  knitr::kable()
 ```
