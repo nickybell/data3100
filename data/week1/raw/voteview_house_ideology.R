@@ -2,7 +2,7 @@ library(dplyr)
 library(readr)
 
 # Load the data
-df <- read_csv(here::here("data/raw/voteview_house_ideology.csv"))
+df <- read_csv(here::here("data/week1/raw/Hall_members.csv"))
 
 # Data wrangling
 df_last_mem <- df |>
@@ -21,23 +21,25 @@ df_last_mem <- df |>
   semi_join(
     df |>
       group_by(congress, state_abbrev, district_code) |>
-      summarize(last_member = max(last_means)),
+      summarize(last_member = max(occupancy)),
     by = join_by(
       congress,
       state_abbrev,
       district_code,
-      last_means == last_member
+      occupancy == last_member
     )
   )
 
-df_last_mem |> # Where more than one member for a district remains in the dataset, remove them. Probably we should come up with a gist to handle this better.
-  anti_join(
-    count(df_last_mem, congress, state_abbrev, district_code) |>
-      filter(n > 1),
+df_last_mem |> # Where more than one member for a district remains in the dataset, choose the higher ICPSR ID number.
+  semi_join(
+    df_last_mem |>
+      group_by(congress, state_abbrev, district_code) |>
+      summarize(last_member = max(icpsr)),
     by = join_by(
       congress,
       state_abbrev,
       district_code,
+      icpsr == last_member
     )
   ) |>
   select(
@@ -49,4 +51,4 @@ df_last_mem |> # Where more than one member for a district remains in the datase
     nominate_dim1,
     nominate_dim2
   ) |>
-  write_csv(here::here("data/voteview_house_ideology.csv"))
+  write_csv(here::here("data/week1/voteview_house_ideology.csv"))
