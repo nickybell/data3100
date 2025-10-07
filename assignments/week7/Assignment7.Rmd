@@ -1,0 +1,230 @@
+---
+title: "Assignment 7"
+author: "Nicky Bell"
+output: 
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  include = FALSE
+)
+options(scipen = 999)
+```
+
+For this homework assignment, we will be working with the [2024 American National Election Study (ANES)](https://electionstudies.org/) Time Series dataset. The ANES is a large, nationally representative survey that collects data on voting behavior, political attitudes, and demographic characteristics of the U.S. population.
+
+This data dictionary describes the variables in the cleaned dataset.
+
+|Variable Name|Description|
+|:---|:---|
+|`id`|A unique identifier for each respondent in the 2024 ANES Time Series study.|
+|`party_id`|Respondent's 7-point party identification.|
+|`race`|Respondent's self-identified race and ethnicity.|
+|`age`|Respondent's age in years on Election Day.|
+|`educ`|Respondent's highest level of education.|
+|`gender`|Respondent's self-identified gender.|
+|`income`|Respondent's total household income over the past 12 months, converted to the numeric midpoint of the original category.|
+|`pres_vote`|A summary of the respondent's presidential vote choice or intent to vote from the pre-election survey.|
+|`economy`|Respondent's approval or disapproval of how the president is handling the economy.|
+|`immigration`|Respondent's approval or disapproval of the president's handling of immigration.|
+|`crime`|Respondent's approval or disapproval of the president's handling of crime.|
+|`attention_to_politics`|How often the respondent pays attention to government and politics.|
+|`weights`|Survey weights to make the data nationally representative.|
+
+### Assignment Instructions
+
+You must submit both a .Rmd file and knitted output in either HTML or PDF format. In addition, you **must** `echo` your code and hide any messages and warnings in your knitted output to assist the TAs in grading your work. Assignments missing either file, do not `echo` the code, or do not hide messages and warnings will receive a 2 point deduction.
+
+Where you are asked to interpret the results of our analysis, you must include a brief written response to receive full credit for the question.
+
+Please review the course policy on Generative AI tools in the [syllabus](https://canvas.upenn.edu/courses/1867281/assignments/syllabus).
+
+### Assignment Questions
+
+1. Estimate a linear regression model to predict respondents' likelihood of voting for Donald Trump using `party_id`, `race`, `age`, `educ`, `gender`, and `income` as predictors:
+
+    * Convert the `party_id` variable into a three-category variable.
+    * Use a meaningful reference category for each categorical predictor.
+    * Use the `weights` variable to make the model nationally representative.
+    
+
+    Use the `{stargazer}` package to produce a nicely formatted table of your regression results. What are the key predictors of voting for Trump?
+
+```{r question1}
+library(tidyverse)
+library(stargazer)
+anes <- read_csv(here::here("data", "week7", "anes_2024.csv")) |>
+  mutate(
+    party_id = case_when(
+      str_detect(party_id, "Democrat") ~ "Democrat",
+      str_detect(party_id, "Republican") ~ "Republican",
+      str_detect(party_id, "Independent") ~ "Independent",
+      TRUE ~ NA_character_
+    ),
+    trump_vote = if_else(pres_vote == "Donald Trump", 1, 0, missing = NA),
+    party_id = relevel(factor(party_id), ref = "Independent"),
+    race = relevel(factor(race), ref = "White, non-Hispanic"),
+    educ = relevel(factor(educ), ref = "Less than high school credential"),
+    gender = relevel(factor(gender), ref = "Man")
+  )
+
+reg1 <- lm(
+  trump_vote ~
+    relevel(factor(party_id), ref = "Independent") +
+      race +
+      age +
+      educ +
+      gender +
+      income,
+  data = anes,
+  weights = weights
+)
+```
+
+```{r q1stargazer, results = "asis"}
+stargazer(
+  reg1,
+  type = "html",
+  title = "Predictors of Trump Vote Choice",
+  dep.var.labels = "Trump Vote (1 = Yes, 0 = No)",
+  covariate.labels = c(
+    "Party ID: Democrat (ref: Independent)",
+    "Party ID: Republican",
+    "Race: Asian/Pacific Islander (ref: White)",
+    "Race: Black",
+    "Race: Hispanic",
+    "Race: Multiple races",
+    "Race: Native American/Other",
+    "Age",
+    "Education: Bachelor's degree (ref: no HS)",
+    "Education: Graduate degree",
+    "Education: High school",
+    "Education: Some post-high school",
+    "Gender: Nonbinary (ref: Man)",
+    "Gender: Something else",
+    "Gender: Woman",
+    "Income"
+  ),
+  keep.stat = c("n", "adj.rsq")
+)
+```
+
+2. Now, let's consider issues that might have affected people's decision to vote for Donald Trump. Estimate a linear regression model to predict respondents' likelihood of voting for Donald Trump using views of Joe Biden's handling of the economy, immigration, and crime as predictors:
+
+    * Convert each of the covariates into a two-category variable (approve vs. disapprove).
+    * Also control for party ID.
+    * Use a meaningful reference category for each categorical predictor.
+    * Use the `weights` variable to make the model nationally representative.
+    
+    Do not report these results using a `stargazer` table.
+
+```{r question2}
+anes <- anes |>
+  mutate(
+    economy = case_when(
+      str_detect(economy, "Approve") ~ "Approve",
+      str_detect(economy, "Disapprove") ~ "Disapprove",
+      TRUE ~ NA
+    ),
+    immigration = case_when(
+      str_detect(immigration, "Approve") ~ "Approve",
+      str_detect(immigration, "Disapprove") ~ "Disapprove",
+      TRUE ~ NA
+    ),
+    crime = case_when(
+      str_detect(crime, "Approve") ~ "Approve",
+      str_detect(crime, "Disapprove") ~ "Disapprove",
+      TRUE ~ NA
+    ),
+    economy = relevel(factor(economy), ref = "Approve"),
+    immigration = relevel(factor(immigration), ref = "Approve"),
+    crime = relevel(factor(crime), ref = "Approve")
+  )
+
+reg2 <- lm(
+  trump_vote ~ economy + immigration + crime + party_id,
+  data = anes,
+  weights = weights
+)
+```
+
+3. We might imagine that the effect of views on President Biden's handling of these issues might vary depending on how closely the voter pays attention to politics. Add interaction terms between whether someone pays attention to politics half of the time or more (a `TRUE`/`FALSE` variable) and each of the issue-based predictors in your model from \#2 above. Report the results from both models using a `stargazer` table. Are any of the interaction terms statistically significant at the 0.05 level? What do these results suggest about how attention to politics moderates the relationship between issue views and vote choice?
+
+```{r question3}
+anes <- anes |>
+  mutate(
+    attention_to_politics = case_when(
+      attention_to_politics %in%
+        c("About half the time", "Most of the time", "Always") ~
+        TRUE,
+      attention_to_politics %in% c("Some of the time", "Never") ~ FALSE,
+      .default = NA
+    )
+  )
+
+reg3 <- lm(
+  trump_vote ~
+    economy *
+      attention_to_politics +
+      immigration * attention_to_politics +
+      crime * attention_to_politics +
+      party_id,
+  data = anes,
+  weights = weights
+)
+```
+
+```{r q3stargazer, results = "asis"}
+stargazer(
+  reg2,
+  reg3,
+  type = "html",
+  title = "Issue-Based Predictors of Trump Vote Choice with Political Attention Interactions",
+  dep.var.labels = "Trump Vote (1 = Yes, 0 = No)",
+  covariate.labels = c(
+    "Economy: Disapprove (ref: Approve)",
+    "Political Attention: High (ref: Low)",
+    "Immigration: Disapprove (ref: Approve)",
+    "Crime: Disapprove (ref: Approve)",
+    "Party ID: Democrat (ref: Independent)",
+    "Party ID: Republican",
+    "Economy Disapprove × High Attention",
+    "Immigration Disapprove × High Attention",
+    "Crime Disapprove × High Attention"
+  ),
+  keep.stat = c("n", "adj.rsq")
+)
+```
+
+4. Generate two hypothetical respondents with different sets of issue preferences. Use the `predict()` function to estimate the predicted probability of voting for Donald Trump for each hypothetical respondent. Present the results as a table.
+
+    *Hint: You can use the `knitr::kable()` function to create a nicely formatted table.*
+
+```{r question4}
+out <- predict(
+  reg3,
+  newdata = tibble(
+    economy = c("Disapprove", "Disapprove"),
+    immigration = c("Approve", "Disapprove"),
+    crime = c("Approve", "Approve"),
+    party_id = c("Democrat", "Independent"),
+    attention_to_politics = c(TRUE, FALSE)
+  )
+)
+
+knitr::kable(
+  tibble(
+    Respondent = c(
+      "Attentive Democrat Diapproves Handling of Economy",
+      "Inattentive Independent Approves Handling of Crime"
+    ),
+    Predicted_Probability_Trump_Vote = out
+  ),
+  caption = "Predicted Probability of Voting for Donald Trump for Two Hypothetical Respondents"
+)
+```

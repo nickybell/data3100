@@ -1,0 +1,310 @@
+---
+title: "DATA 3100 Final Exam: Congressional Polarization and Electoral Competition"
+author: "Nicky Bell"
+output: 
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  include = FALSE
+)
+```
+
+For the final exam, we will analyze the relationship between congressional polarization and electoral competition using two datasets:
+
+1. **DW-NOMINATE scores** from Voteview measuring ideological positions of House members, which has been provided to you as `voteview_house_ideology.csv`. The original dataset can be found [here](https://voteview.com/data).
+2. **MIT Election Data** containing House election results, which has been provided to you as `1976-2024-house.csv`. The original dataset can be found [here](https://electionlab.mit.edu/data).
+
+## Assignment Instructions
+
+You must submit both a .Rmd file and knitted output in either HTML or PDF format. In addition, you **must** `echo` your code and hide any messages and warnings in your knitted output to assist the TAs in grading your work. Assignments missing either file, do not `echo` the code, or do not hide messages and warnings will receive a 20 point deduction.
+
+Where you are asked to interpret the results of our analysis, you must include a brief written response to receive full credit for the question.
+
+Please review the course policy on Generative AI tools in the [syllabus](https://canvas.upenn.edu/courses/1867281/assignments/syllabus).
+
+```{r intro}
+library(tidyverse)
+library(stargazer)
+```
+
+### Part I: Data Preparation
+
+1. Load both datasets and limit the data to only the a) Congresses from the 113th to 118th for the Voteview data and b) years 2012-2022, `stage == "GEN"`, and candidates for the Democratic or Republican parties for the election results data. Calculate the two-party vote share for each candidate in each general election (i.e., the percentage of votes they received out of the total votes for the two major parties, which is different from the `totalvotes` column). Create a single dataframe that combines the election results with DW-NOMINATE scores. 
+
+    *Note: "DEMOCRATIC-FARMER-LABOR" should be recoded as "DEMOCRAT" in the elections data set.*
+
+    *Hint: The 113th Congress corresponds to the 2012 election, the 114th to 2014, and so on.*
+
+```{r q1}
+nominate <- read_csv(here::here("data/final_exam/voteview_house_ideology.csv"))
+nominate_rev <- nominate |>
+  filter(congress >= 113, congress <= 118) |>
+  mutate(
+    year = case_when(
+      congress == 113 ~ 2012,
+      congress == 114 ~ 2014,
+      congress == 115 ~ 2016,
+      congress == 116 ~ 2018,
+      congress == 117 ~ 2020,
+      congress == 118 ~ 2022
+    )
+  )
+
+elections <- read_csv(here::here("data/final_exam/1976-2024-house.csv"))
+elections_rev <- elections |>
+  mutate(
+    party = if_else(party == "DEMOCRATIC-FARMER-LABOR", "DEMOCRAT", party)
+  ) |>
+  filter(
+    year >= 2012,
+    year <= 2022,
+    stage == "GEN",
+    party %in% c("REPUBLICAN", "DEMOCRAT")
+  ) |>
+  # Calculate total votes per race
+  group_by(year, state, district) |>
+  mutate(two_party_votes = sum(candidatevotes, na.rm = TRUE)) |>
+  ungroup() |>
+  # Calculate vote share
+  mutate(
+    two_party_vote_share = candidatevotes / two_party_votes * 100,
+    party = str_to_title(party)
+  ) |>
+  select(
+    year,
+    state_po,
+    district,
+    party,
+    two_party_vote_share,
+    candidatevotes,
+    two_party_votes
+  )
+
+df <- left_join(
+  nominate_rev,
+  elections_rev,
+  by = join_by(
+    year,
+    state_abbrev == state_po,
+    district_code == district,
+    party
+  )
+)
+```
+
+### Part II: Dispersion and Sampling
+
+2. Some people argue that gerrymandering has led to less competitive districts, which in turn has contributed to increased polarization in Congress. Visualize the standard deviation of two-party vote share among election winners (i.e., members of Congress) for each Congress from the 113th to the 118th. How do you interpret your results?
+
+    *Hint: You may want to remove uncontested elections (100% vote share) from your analysis.*
+
+```{r q2}
+df |>
+  filter(two_party_vote_share != 100) |>
+  group_by(congress) |>
+  mutate(
+    mean_share = mean(two_party_vote_share, na.rm = TRUE),
+    diff_from_mean = two_party_vote_share - mean_share,
+    squared_diff = diff_from_mean^2
+  ) |>
+  summarize(
+    mean_share = mean(two_party_vote_share, na.rm = TRUE),
+    sum_of_squared_diff = sum(squared_diff, na.rm = TRUE),
+    variance = sum_of_squared_diff / n(),
+    sd = sqrt(variance)
+  ) |>
+  ggplot(aes(x = congress, y = sd)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, NA)) +
+  labs(
+    title = "Standard Deviation of Two-Party Vote Share Among Election Winners",
+    x = "Congress Year",
+    y = "Standard Deviation of Vote Share"
+  ) +
+  theme_minimal()
+```
+
+3. As you know, there is a mid-term Congressional election in 2026. There are similarities to the 2018 mid-term elections, when Donald Trump was President and Republicans controlled both chambers of Congress. Suppose we are working on an exit poll for the 2026 election, and we want to know how many districts we need to sample to confidently predict the election results. Using sampling distributions drawn from the 2018 election results, determine at what proportion of districts the sampling distribution of the *proportion* of Democratic seats yields a sufficiently “tight” distribution around the true mean. Justify your answer using appropriate visualizations and/or numerical summaries.
+
+```{r q3}
+df_2018 <- filter(df, year == 2018)
+set.seed(20912)
+sampling_dist <- tibble()
+for (p in seq(.15, .5, .05)) {
+  for (i in seq_len(1000)) {
+    sampling_dist <- bind_rows(
+      sampling_dist,
+      df_2018 |>
+        sample_frac(p) |>
+        summarize(mean_dem = mean(party == "Democrat")) |>
+        mutate(iter = i, sample_prop = p)
+    )
+  }
+}
+ggplot(sampling_dist, aes(x = mean_dem)) +
+  geom_histogram() +
+  facet_wrap(~sample_prop, nrow = 2) +
+  labs(
+    title = "Sampling Distribution of Proportion of Democratic Seats (2018)",
+    x = "Proportion of Democratic Seats",
+    y = "Frequency"
+  )
+```
+
+4. Using your recommended sample size, what is the 95% confidence interval for the percentage of the two-party vote that Democratic candidates received in the 2018 general election? With this sample size, will you be able to confidently predict whether Democrats won the popular (overall) vote in addition the majority of seats? How do you know?
+
+    *Hint: The Democratic candidate recieves 1-p of the two-party vote in a district where the Republican candidate receives p of the two-party vote (p is a proportion, not a percentage).*
+
+```{r q4}
+set.seed(20912)
+samp_dist_40 <- tibble()
+for (i in seq_len(1000)) {
+  samp_dist_40 <- bind_rows(
+    samp_dist_40,
+    df_2018 |>
+      sample_frac(.4) |>
+      mutate(
+        dem_votes = if_else(
+          party == "Democrat",
+          two_party_vote_share / 100 * two_party_votes,
+          (1 - two_party_vote_share / 100) * two_party_votes
+        )
+      ) |>
+      summarize(
+        total_dem_votes = sum(dem_votes),
+        total_votes = sum(two_party_votes),
+        prop_dem = total_dem_votes / total_votes * 100
+      ) |>
+      mutate(iter = i)
+  )
+}
+
+mean_samp_dist_40 <- mean(samp_dist_40$prop_dem)
+sd_samp_dist_40 <- sd(samp_dist_40$prop_dem)
+ci_lower <- qnorm(0.025, mean = mean_samp_dist_40, sd = sd_samp_dist_40)
+ci_upper <- qnorm(0.975, mean = mean_samp_dist_40, sd = sd_samp_dist_40)
+print(paste(
+  "95% Confidence Interval: [",
+  round(ci_lower, 2),
+  ", ",
+  round(ci_upper, 2),
+  "]",
+  sep = ""
+))
+```
+
+### Part III: Hypothesis Testing and Regression Analysis
+
+5. Do competitive districts elect more moderate members of Congress? For each Congress, calculate the difference in mean **absolute** DW-NOMINATE score on the first dimension for representatives from "safe" districts (where the winning candidate received more than 60% of the two-party vote) versus "competitive" districts (where the winning candidate received between 50% and 60% of the two-party vote). Visualize the mean and 95% confidence intervals for the difference over time. How do you interpret your results?
+
+    *Note: Technically, there is no confidence interval because we are using the entire population of members of Congress, but we can use a t-test to estimate what the confidence interval would be if we were to take a sample.*
+
+    *Hint: You may want to use a loop to iteratively run a t-test to get the difference in means and confidence intervals for each Congress.*
+
+```{r q5}
+df_compete <- mutate(
+  df,
+  competitiveness = ifelse(two_party_vote_share > 60, "Safe", "Competitive")
+)
+congress_extreme <- tibble()
+for (i in 113:118) {
+  result <- t.test(
+    abs(nominate_dim1) ~ competitiveness,
+    data = filter(df_compete, congress == i)
+  )
+  congress_extreme <- bind_rows(
+    congress_extreme,
+    tibble(
+      congress = i,
+      mean_diff = result$estimate[1] - result$estimate[2],
+      ci_lower = result$conf.int[1],
+      ci_upper = result$conf.int[2]
+    )
+  )
+}
+
+ggplot(data = congress_extreme, aes(x = congress, y = mean_diff)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+  scale_y_continuous(limits = c(NA, 0)) +
+  labs(
+    title = "Difference in Mean Absolute DW-NOMINATE Score: Safe vs Competitive Districts",
+    x = "Congress Number",
+    y = "Mean Difference in Absolute DW-NOMINATE Score"
+  ) +
+  theme_minimal()
+```
+
+6. Create a new variable indicating whether a representative is a new member of Congress (this will not work for members of the 113th Congress). Compare the ideological extremism of new members (e.g., first elected in 2014 or later) from competitive districts versus incumbents from competitive districts. If a competitive district elects a new member, are they likely to be more moderate than the incumbent they replaced?
+
+    *Hint: Members sometimes switch districts, so you may want to use a unique identifier like `bioname` to track members across Congresses.*
+
+```{r q6}
+df_first_year <- df |>
+  group_by(bioname) |>
+  summarize(min_year = min(year))
+df_new <- left_join(df_compete, df_first_year, by = "bioname") |>
+  filter(year != 2012) |>
+  mutate(
+    is_new = if_else(year == min_year, "New", "Incumbent")
+  )
+t.test(
+  abs(nominate_dim1) ~ is_new,
+  data = filter(df_new, competitiveness == "Competitive")
+)
+```
+
+7. Perhaps our grouping of competitive and safe districts is too simplistic. Use OLS regression to predict the absolute DW-NOMINATE score using the two-party vote share, the member's party, and whether the member is new as independent variables. How do you interpret the coefficients?
+
+```{r q7}
+reg <- lm(
+  abs(nominate_dim1) ~ two_party_vote_share + party + is_new,
+  data = df_new
+)
+```
+
+```{r results = "asis"}
+stargazer(
+  reg,
+  type = "html",
+  title = "Regression Results",
+  dep.var.labels = c(
+    "Absolute DW-NOMINATE Score"
+  ),
+  covariate.labels = c(
+    "Two-Party Vote Share",
+    "Party (Republican)",
+    "New Member (Yes)"
+  ),
+  keep.stat = c("n", "adj.rsq")
+)
+```
+
+8. Use the `predict()` function to compare the predicted ideological extremisim of two members of Congress with different characteristics. How do you interpret the results?
+
+```{r q8}
+out <- predict(
+  reg,
+  newdata = data.frame(
+    two_party_vote_share = c(55, 70),
+    party = c("Republican", "Democrat"),
+    is_new = c("New", "Incumbent")
+  )
+)
+tibble(
+  Scenario = c(
+    "New Republican from Competitive District (55% Vote Share)",
+    "Incumbent Democrat from Safe District (70% Vote Share)"
+  ),
+  `Predicted Absolute DW-NOMINATE` = out
+) |>
+  knitr::kable()
+```
