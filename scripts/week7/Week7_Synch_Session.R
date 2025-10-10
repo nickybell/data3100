@@ -3,7 +3,7 @@
 # Date created: 2024-10-09
 # Author: Nicholas Bell (belln@sas.upenn.edu)
 
-# Today, we are going to continue our dicussion of ordinary least squares regression by extending our analysis to include two new elements: (1) categorical independent variables with a reference cateogory, and (2) interaction terms.
+# Today, we are going to continue our discussion of ordinary least squares regression by extending our analysis to include two new elements: (1) categorical independent variables with a reference category, and (2) interaction terms.
 
 # We are going to be working with data from an ABC News/Washington Post poll conducted in 2019. You may recall that from December 2018 - January 2019, the U.S. federal government was partially shut down for a record 35 days. The poll asked respondents about their opinions on the shutdown and its effects on them personally. We will use this data to get an idea of how the politics of the current government shutdown might play out (the politics being secondary to the human impacts, of course, but I'm a political scientist).
 
@@ -38,7 +38,7 @@ summary(reg1)
 # 1. All of our variables must be numeric. Therefore, R automatically converts categorical variables into a series of binary (0/1) dummy/dicohotomous variables. (This is called one-hot encoding in machine learning, for some reason.)
 # 2. One of the assumptions of regression is that there is no perfect correlation between independent variables. If we included a dummy variable for every category of a categorical variable, then the sum of those dummy variables would equal 1 for every observation, which is perfect correlation. Therefore, R automatically omits one category from the regression. This omitted category is the reference category.
 
-# The regression coefficients for a categorical variable are interepreted a little bit differently than a continuous variable. The coefficient for a categorical variable represents the difference in the predicted value of the dependent variable between that category and the reference category, holding all other independent variables constant.
+# The regression coefficients for a categorical variable are interpreted a little bit differently than a continuous variable. The coefficient for a categorical variable represents the difference in the predicted value of the dependent variable between that category and the reference category, holding all other independent variables constant.
 
 # If we want to change the reference level, we can use the relevel() function. Let's change the reference level for pid to "Independent" instead of "Democrat".
 reg2 <- lm(
@@ -47,7 +47,8 @@ reg2 <- lm(
       region +
       gender +
       age +
-      educ,
+      educ +
+      income,
   data = poll,
   weights = weight
 )
@@ -76,7 +77,7 @@ stargazer(
   keep.stat = c("n", "adj.rsq")
 )
 
-# Now, we might think that the effect of political party might be moderated (changed) by another variable. For example, maybe the effect of political party is different depeending on whether the respondent has been personally inconvenienced by the shutdown. We can test this hypothesis by including an interaction term in our regression.
+# Now, we might think that the effect of political party might be moderated (changed) by another variable. For example, maybe the effect of political party is different depending on whether the respondent has been personally inconvenienced by the shutdown. We can test this hypothesis by including an interaction term in our regression.
 
 # x -----> y
 #     ^
