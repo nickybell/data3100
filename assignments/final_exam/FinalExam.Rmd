@@ -243,8 +243,8 @@ ggplot(data = congress_extreme, aes(x = congress, y = mean_diff)) +
   theme_minimal()
 ```
 
-6. Create a new variable indicating whether a representative is a new member of Congress (this will not work for members of the 113th Congress). Compare the ideological extremism of new members (e.g., first elected in 2014 or later) from competitive districts versus incumbents from competitive districts. If a competitive district elects a new member, are they likely to be more moderate than the incumbent they replaced?
-
+6. Create a new variable indicating whether a representative is a new member of Congress (this will not work for members of the 113th Congress). This should give you a binary variable where the value is `TRUE` if it is a member's first term in Congress, and otherwise `FALSE`. Are new members from competitive disticts more moderate, on average, than incumbents from competitive districts?
+    
     *Hint: Members sometimes switch districts, so you may want to use a unique identifier like `bioname` to track members across Congresses.*
 
 ```{r q6}
@@ -254,7 +254,7 @@ df_first_year <- df |>
 df_new <- left_join(df_compete, df_first_year, by = "bioname") |>
   filter(year != 2012) |>
   mutate(
-    is_new = if_else(year == min_year, "New", "Incumbent")
+    is_new = if_else(year == min_year, TRUE, FALSE)
   )
 t.test(
   abs(nominate_dim1) ~ is_new,
@@ -296,7 +296,7 @@ out <- predict(
   newdata = data.frame(
     two_party_vote_share = c(55, 70),
     party = c("Republican", "Democrat"),
-    is_new = c("New", "Incumbent")
+    is_new = c(TRUE, FALSE)
   )
 )
 tibble(
